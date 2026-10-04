@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Live Monitor{% endblock %}
+{% block content %}
+<h3 class="mb-2"><i class="bi bi-broadcast"></i> Live Van Locations</h3>
+<p class="text-muted small mb-3">
+  Demo map (OpenStreetMap via Leaflet — no API key required).
+  <span class="ms-2"><span class="badge" style="background:#2e9e4b;">&nbsp;</span> available</span>
+  <span class="ms-2"><span class="badge" style="background:#d9822b;">&nbsp;</span> busy</span>
+  <span class="ms-2"><span class="badge" style="background:#6c757d;">&nbsp;</span> offline</span>
+</p>
+<div id="liveMap"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const map = L.map("liveMap").setView([17.385, 78.4867], 11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    maxZoom: 19,
+  }).addTo(map);
+
+  const statusColor = { available: "#2e9e4b", busy: "#d9822b", offline: "#6c757d" };
+  let markers = {};
+  let firstLoad = true;
+
+  function vanIcon(color, label) {
+    return L.divIcon({
+      className: "",
+      html: `<div style="background:${color};color:#fff;border-radius:50%;width:30px;height:30px;
+              display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+              border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">${label}</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    });
+  }
+
+  async function refresh() {
+    const res = await fetch("{{ url_for('admin.api_van_locations') }}");
+    const vans = await res.json();
+    const bounds = [];
+
+    vans.forEach(v => {
+      if (v.lat == null || v.lng == null) return;
+      const pos = [v.lat, v.lng];
+      bounds.push(pos);
+      const color = statusColor[v.status] || "#6c757d";
+      const label = v.van_number.replace(/[^0-9A-Za-z]/g, "").slice(-3) || "V";
+
+      if (markers[v.id]) {
+        markers[v.id].setLatLng(pos);
+        markers[v.id].setIcon(vanIcon(color, label));
+      } else {
+        markers[v.id] = L.marker(pos, { icon: vanIcon(color, label) })
+          .addTo(map)
+          .bindPopup(`<strong>${v.van_number}</strong><br>Status: ${v.status}`);
+      }
+    });
+
+    if (firstLoad && bounds.length) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+      firstLoad = false;
+    }
+  }
+
+  refresh();
+  setInterval(refresh, {{ 5000 }});
+</script>
+{% endblock %}

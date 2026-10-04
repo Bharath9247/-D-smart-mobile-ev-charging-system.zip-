@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Assign Requests{% endblock %}
+{% block content %}
+<h3 class="mb-4">Pending Charging Requests</h3>
+
+<div class="card p-3">
+  <table class="table table-hover align-middle mb-0">
+    <thead><tr><th>#</th><th>Customer</th><th>Type</th><th>Location</th><th>Requested</th><th>Assign to Van</th></tr></thead>
+    <tbody>
+      {% for r in pending %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.customer.name }}</td>
+        <td>{{ r.charging_type }}</td>
+        <td>{{ '%.4f'|format(r.lat) }}, {{ '%.4f'|format(r.lng) }}</td>
+        <td>{{ r.requested_at.strftime('%d %b %H:%M') }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('admin.assign_request', request_id=r.id) }}" class="d-flex gap-2">
+            <select name="van_id" class="form-select form-select-sm">
+              <option value="">Auto-assign nearest</option>
+              {% for v in vans %}
+                <option value="{{ v.id }}">{{ v.van_number }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-sm btn-success">Assign</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">No pending requests.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

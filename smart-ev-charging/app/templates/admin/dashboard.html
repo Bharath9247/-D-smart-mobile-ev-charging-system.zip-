@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<h3 class="mb-4">Admin Overview</h3>
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="stat-card bg-teal">
+      <p class="mb-1">Registered Users</p>
+      <h2>{{ stats.total_users }}</h2>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card bg-blue">
+      <p class="mb-1">Drivers</p>
+      <h2>{{ stats.total_drivers }}</h2>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card bg-purple">
+      <p class="mb-1">Charging Vans</p>
+      <h2>{{ stats.total_vans }}</h2>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card bg-orange">
+      <p class="mb-1">Pending Requests</p>
+      <h2>{{ stats.pending_requests }}</h2>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card bg-blue">
+      <p class="mb-1">Active Requests</p>
+      <h2>{{ stats.active_requests }}</h2>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card bg-teal">
+      <p class="mb-1">Completed Today</p>
+      <h2>{{ stats.completed_today }}</h2>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4 g-3">
+  <div class="col-md-3"><a href="{{ url_for('admin.manage_users') }}" class="btn btn-outline-success w-100 py-3">Manage Users</a></div>
+  <div class="col-md-3"><a href="{{ url_for('admin.manage_vans') }}" class="btn btn-outline-success w-100 py-3">Manage Vans</a></div>
+  <div class="col-md-3"><a href="{{ url_for('admin.manage_requests') }}" class="btn btn-outline-success w-100 py-3">Assign Requests</a></div>
+  <div class="col-md-3"><a href="{{ url_for('admin.monitor') }}" class="btn btn-outline-success w-100 py-3">Live Monitor</a></div>
+</div>
+{% endblock %}

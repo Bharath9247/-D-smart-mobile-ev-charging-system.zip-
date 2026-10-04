@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Booking History{% endblock %}
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-clock-history"></i> Booking History</h3>
+
+<div class="card p-3">
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th>#</th><th>Date</th><th>Type</th><th>Status</th><th>Amount</th><th>Payment</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reqs %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.requested_at.strftime('%d %b %Y %H:%M') }}</td>
+        <td>{{ r.charging_type }}</td>
+        <td><span class="badge bg-secondary badge-status">{{ r.status }}</span></td>
+        <td>₹{{ r.amount }}</td>
+        <td>
+          {% if r.payment and r.payment.status == 'success' %}
+            <span class="badge bg-success">Paid ({{ r.payment.provider }})</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">Unpaid</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if r.status == 'completed' and (not r.payment or r.payment.status != 'success') %}
+            <a href="{{ url_for('user.pay', request_id=r.id) }}" class="btn btn-sm btn-success">Pay</a>
+          {% elif r.status not in ['completed','cancelled'] %}
+            <a href="{{ url_for('user.track', request_id=r.id) }}" class="btn btn-sm btn-outline-primary">Track</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">No requests yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

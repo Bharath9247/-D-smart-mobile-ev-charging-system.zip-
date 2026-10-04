@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}My Requests{% endblock %}
+{% block content %}
+<h3 class="mb-4">My Charging Requests</h3>
+<div class="card p-3">
+  <table class="table table-hover align-middle mb-0">
+    <thead><tr><th>#</th><th>Customer</th><th>Type</th><th>Status</th><th>Amount</th><th>Requested</th></tr></thead>
+    <tbody>
+      {% for r in reqs %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.customer.name }}</td>
+        <td>{{ r.charging_type }}</td>
+        <td><span class="badge bg-secondary badge-status">{{ r.status }}</span></td>
+        <td>₹{{ r.amount }}</td>
+        <td>{{ r.requested_at.strftime('%d %b %H:%M') }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">No requests yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

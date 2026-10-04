@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Revenue Reports{% endblock %}
+{% block content %}
+<h3 class="mb-4">Revenue Reports</h3>
+
+<div class="stat-card bg-teal mb-4" style="max-width: 300px;">
+  <p class="mb-1">Total Revenue</p>
+  <h2>₹{{ '%.2f'|format(total_revenue) }}</h2>
+</div>
+
+<div class="row">
+  <div class="col-md-5">
+    <div class="card p-3">
+      <h6>By Charging Type</h6>
+      <table class="table mb-0">
+        <thead><tr><th>Type</th><th>Revenue</th></tr></thead>
+        <tbody>
+          {% for ctype, amt in by_type %}
+          <tr><td>{{ ctype }}</td><td>₹{{ '%.2f'|format(amt) }}</td></tr>
+          {% else %}
+          <tr><td colspan="2" class="text-center text-muted py-3">No revenue yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card p-3">
+      <h6>Recent Payments</h6>
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Request</th><th>Amount</th><th>Method</th><th>Paid At</th></tr></thead>
+        <tbody>
+          {% for p in recent_payments %}
+          <tr>
+            <td>#{{ p.request_id }}</td>
+            <td>₹{{ p.amount }}</td>
+            <td>{{ p.provider }}</td>
+            <td>{{ p.paid_at.strftime('%d %b %H:%M') if p.paid_at else '-' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">No payments yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

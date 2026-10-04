@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Request Charging{% endblock %}
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-geo-alt-fill text-success"></i> Request Mobile Charging</h3>
+
+<div class="row">
+  <div class="col-md-7">
+    <div class="card p-4">
+      <form method="POST" id="reqForm">
+        <div class="mb-3">
+          <label class="form-label">Your Location</label>
+          <div class="input-group">
+            <input type="text" id="address_text" name="address_text" class="form-control" placeholder="Detecting location...">
+            <button class="btn btn-outline-success" type="button" onclick="detectLocation()">
+              <i class="bi bi-crosshair"></i> Detect
+            </button>
+          </div>
+          <div class="form-text" id="gpsHint">Uses your browser's GPS (HTML5 Geolocation API).</div>
+        </div>
+
+        <div id="map"></div>
+        <div class="form-text mb-3">Can't get GPS? Click anywhere on the map, drag the pin, or type coordinates below.</div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Latitude</label>
+            <input type="number" step="any" name="lat" id="lat" class="form-control" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Longitude</label>
+            <input type="number" step="any" name="lng" id="lng" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Charging Type</label>
+            <select name="charging_type" class="form-select" required>
+              {% for p in prices %}
+                <option value="{{ p.charging_type }}">{{ p.charging_type }} (₹{{ p.price_per_kwh }}/kWh + ₹{{ p.service_fee }} fee)</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Estimated kWh needed</label>
+            <input type="number" name="estimated_kwh" class="form-control" value="10" min="1" step="0.5">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Vehicle Number</label>
+          <input type="text" name="vehicle_number" class="form-control" placeholder="e.g. TS09AB1234">
+        </div>
+
+        <button class="btn btn-success w-100" type="submit"><i class="bi bi-send-fill"></i> Submit Request</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <div class="card p-4">
+      <h6>How it works</h6>
+      <ol class="small">
+        <li>We detect your live GPS location.</li>
+        <li>Choose the charging type your EV needs.</li>
+        <li>Admin assigns the nearest available mobile charging van.</li>
+        <li>Track the van in real time until it arrives.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Demo map (OpenStreetMap via Leaflet — no API key required).
+  let map, marker;
+
+  function initMap(lat, lng) {
+    map = L.map("map").setView([lat, lng], 15);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
+
+    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    marker.on("dragend", () => {
+      const pos = marker.getLatLng();
+      setCoords(pos.lat, pos.lng);
+    });
+    // Fallback for when GPS is unavailable/blocked: let the user just click the map.
+    map.on("click", (e) => {
+      marker.setLatLng(e.latlng);
+      setCoords(e.latlng.lat, e.latlng.lng);
+    });
+  }
+
+  function setCoords(lat, lng) {
+    document.getElementById("lat").value = lat;
+    document.getElementById("lng").value = lng;
+    document.getElementById("address_text").value = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+  }
+
+  function detectLocation() {
+    const hint = document.getElementById("gpsHint");
+
+    if (!window.isSecureContext) {
+      hint.innerHTML = '<span class="text-danger">Browsers only allow GPS access over HTTPS (or on localhost). ' +
+        'Click the map below or type coordinates manually instead.</span>';
+      if (!map) initMap(17.385, 78.4867);
+      return;
+    }
+    if (!navigator.geolocation) {
+      hint.innerHTML = '<span class="text-danger">Geolocation is not supported by this browser. Click the map instead.</span>';
+      if (!map) initMap(17.385, 78.4867);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      setCoords(lat, lng);
+      if (map) {
+        map.setView([lat, lng]);
+        marker.setLatLng([lat, lng]);
+      } else {
+        initMap(lat, lng);
+      }
+    }, (err) => {
+      let msg = "Unable to fetch location. Click the map or type coordinates manually.";
+      if (err.code === err.PERMISSION_DENIED) {
+        msg = "Location permission denied. Enable it in your browser's site settings, or click the map / type coordinates manually.";
+      }
+      hint.innerHTML = `<span class="text-danger">${msg}</span>`;
+      if (!map) initMap(17.385, 78.4867); // fallback center: Hyderabad
+    });
+  }
+
+  window.onload = detectLocation;
+</script>
+{% endblock %}

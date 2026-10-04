@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Driver Dashboard{% endblock %}
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-truck-front-fill"></i> Driver Dashboard</h3>
+
+{% if not van %}
+  <div class="card p-4">
+    <h5 class="mb-3"><i class="bi bi-truck"></i> Add Your Charging Van</h5>
+    <p class="text-muted small">No van is linked to your account yet. Register your van's details below
+      (or ask an admin to assign one from the Manage Vans page).</p>
+    <form method="POST" action="{{ url_for('driver.add_van') }}" id="addVanForm">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Van Number</label>
+          <input type="text" name="van_number" class="form-control" placeholder="e.g. TS-EVAN-2201" required>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Battery Capacity (kWh)</label>
+          <input type="number" name="battery_capacity_kwh" class="form-control" value="50" min="1" step="1">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Supported Charging Types</label>
+        <div class="d-flex gap-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="supported_types" value="AC-Slow" id="t1" checked>
+            <label class="form-check-label" for="t1">AC-Slow</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="supported_types" value="AC-Fast" id="t2" checked>
+            <label class="form-check-label" for="t2">AC-Fast</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="supported_types" value="DC-Fast" id="t3" checked>
+            <label class="form-check-label" for="t3">DC-Fast</label>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Latitude</label>
+          <input type="number" step="any" name="lat" id="vanLat" class="form-control">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Longitude</label>
+          <input type="number" step="any" name="lng" id="vanLng" class="form-control">
+        </div>
+      </div>
+      <div class="mb-3">
+        <button type="button" class="btn btn-outline-success btn-sm" onclick="detectVanLocation()">
+          <i class="bi bi-crosshair"></i> Detect Current Location
+        </button>
+        <span id="vanLocStatus" class="text-muted small ms-2">Or type coordinates above manually if GPS doesn't work.</span>
+      </div>
+      <button class="btn btn-success" type="submit">Register Van</button>
+    </form>
+  </div>
+{% else %}
+  <div class="card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h5>Van {{ van.van_number }}</h5>
+        <span class="badge bg-{{ 'success' if van.status=='available' else ('warning text-dark' if van.status=='busy' else 'secondary') }} badge-status">{{ van.status }}</span>
+      </div>
+      <form method="POST" action="{{ url_for('driver.toggle_availability') }}">
+        <button class="btn btn-outline-success">{{ 'Go Offline' if van.status != 'offline' else 'Go Online' }}</button>
+      </form>
+    </div>
+    <p class="text-muted small mt-2 mb-0" id="gpsStatusLine">Your GPS location is shared automatically while this page is open.</p>
+    <div class="input-group input-group-sm mt-2" style="max-width: 420px;">
+      <input type="number" step="any" id="manualLat" class="form-control" placeholder="Latitude">
+      <input type="number" step="any" id="manualLng" class="form-control" placeholder="Longitude">
+      <button class="btn btn-outline-secondary" type="button" onclick="sendManualLocation()">Set Location Manually</button>
+    </div>
+  </div>
+
+  {% if active_request %}
+  <div class="card p-4">
+    <h5>Active Request #{{ active_request.id }} <span class="badge bg-info badge-status">{{ active_request.status }}</span></h5>
+    <p class="mb-1">Customer: {{ active_request.customer.name }} ({{ active_request.customer.phone or 'no phone' }})</p>
+    <p class="mb-1">Charging type: {{ active_request.charging_type }} | Amount: ₹{{ active_request.amount }}</p>
+
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <a href="{{ url_for('driver.navigate', request_id=active_request.id) }}" class="btn btn-primary">
+        <i class="bi bi-signpost-2-fill"></i> Navigate
+      </a>
+
+      {% if active_request.status in ['assigned','en_route'] %}
+      <form method="POST" action="{{ url_for('driver.start_charging', request_id=active_request.id) }}">
+        <button class="btn btn-success">Start Charging</button>
+      </form>
+      {% endif %}
+
+      {% if active_request.status == 'charging' %}
+      <form method="POST" action="{{ url_for('driver.end_charging', request_id=active_request.id) }}">
+        <button class="btn btn-danger">End Charging</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <form method="POST" action="{{ url_for('driver.upload_status', request_id=active_request.id) }}" class="mt-3">
+      <label class="form-label">Send status update to customer</label>
+      <div class="input-group">
+        <input type="text" name="note" class="form-control" placeholder="e.g. Arriving in 5 minutes">
+        <button class="btn btn-outline-secondary">Send</button>
+      </div>
+    </form>
+
+    {% if active_request.status == 'completed' %}
+    <form method="POST" action="{{ url_for('driver.collect_payment', request_id=active_request.id) }}" class="mt-3">
+      <label class="form-label">Collect offline payment</label>
+      <div class="input-group">
+        <select name="method" class="form-select">
+          <option value="cash">Cash</option>
+          <option value="card">Card (POS)</option>
+        </select>
+        <button class="btn btn-success">Mark Paid</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="alert alert-light border">No active request assigned right now.</div>
+  {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not van %}
+<script>
+  function detectVanLocation() {
+    const status = document.getElementById("vanLocStatus");
+    if (!window.isSecureContext) {
+      status.innerHTML = '<span class="text-danger">GPS needs HTTPS (or localhost). Type coordinates above manually instead.</span>';
+      return;
+    }
+    if (!navigator.geolocation) {
+      status.innerHTML = '<span class="text-danger">Geolocation not supported by this browser. Type coordinates manually.</span>';
+      return;
+    }
+    navigator.geolocation.getCurrentPosition((pos) => {
+      document.getElementById("vanLat").value = pos.coords.latitude;
+      document.getElementById("vanLng").value = pos.coords.longitude;
+      status.innerText = `Location set: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+    }, (err) => {
+      status.innerHTML = err.code === err.PERMISSION_DENIED
+        ? '<span class="text-danger">Location permission denied. Enable it in browser settings, or type coordinates manually.</span>'
+        : '<span class="text-danger">Unable to fetch location. Type coordinates manually.</span>';
+    });
+  }
+</script>
+{% endif %}
+{% if van %}
+<script>
+  const gpsStatus = document.getElementById("gpsStatusLine");
+
+  function pushLocation(lat, lng) {
+    fetch("{{ url_for('driver.update_location') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat, lng }),
+    });
+  }
+
+  function sendLocation() {
+    if (!window.isSecureContext) {
+      gpsStatus.innerHTML = '<span class="text-danger">Auto GPS needs HTTPS (or localhost) — use "Set Location Manually" below instead.</span>';
+      return;
+    }
+    if (!navigator.geolocation) {
+      gpsStatus.innerHTML = '<span class="text-danger">Geolocation not supported — use "Set Location Manually" below.</span>';
+      return;
+    }
+    navigator.geolocation.getCurrentPosition((pos) => {
+      pushLocation(pos.coords.latitude, pos.coords.longitude);
+      gpsStatus.innerText = `Live GPS active — last update ${new Date().toLocaleTimeString()}`;
+    }, (err) => {
+      gpsStatus.innerHTML = err.code === err.PERMISSION_DENIED
+        ? '<span class="text-danger">Location permission denied — use "Set Location Manually" below.</span>'
+        : '<span class="text-danger">Unable to fetch GPS — use "Set Location Manually" below.</span>';
+    });
+  }
+
+  function sendManualLocation() {
+    const lat = parseFloat(document.getElementById("manualLat").value);
+    const lng = parseFloat(document.getElementById("manualLng").value);
+    if (isNaN(lat) || isNaN(lng)) {
+      alert("Enter both latitude and longitude.");
+      return;
+    }
+    pushLocation(lat, lng);
+    gpsStatus.innerText = `Manual location set — last update ${new Date().toLocaleTimeString()}`;
+  }
+
+  sendLocation();
+  setInterval(sendLocation, 10000);
+</script>
+{% endif %}
+{% endblock %}

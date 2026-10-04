@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Navigate{% endblock %}
+{% block content %}
+<h3 class="mb-3"><i class="bi bi-signpost-2-fill"></i> Navigate to Customer — Request #{{ req.id }}</h3>
+<div id="navMap"></div>
+<a href="{{ url_for('driver.dashboard') }}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Demo map (OpenStreetMap via Leaflet). Route line comes from the free
+  // OSRM public demo routing server — no API key required for either.
+  const destination = [{{ req.lat }}, {{ req.lng }}];
+  const map = L.map("navMap").setView(destination, 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    maxZoom: 19,
+  }).addTo(map);
+
+  const destIcon = L.divIcon({
+    className: "", html: '<div style="background:#1d5fad;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">🏁</div>',
+    iconSize: [28, 28], iconAnchor: [14, 14],
+  });
+  const vanIcon = L.divIcon({
+    className: "", html: '<div style="background:#2e9e4b;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">🚐</div>',
+    iconSize: [28, 28], iconAnchor: [14, 14],
+  });
+
+  L.marker(destination, { icon: destIcon }).addTo(map).bindPopup("Customer location");
+
+  async function drawRoute(origin) {
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${destination[1]},${destination[0]}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.routes && data.routes[0]) {
+        const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        L.polyline(coords, { color: "#1d5fad", weight: 4, opacity: 0.8 }).addTo(map);
+        map.fitBounds(coords, { padding: [40, 40] });
+        return;
+      }
+    } catch (e) { /* fall through to markers-only view below */ }
+    map.fitBounds([origin, destination], { padding: [40, 40] });
+  }
+
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const origin = [pos.coords.latitude, pos.coords.longitude];
+    L.marker(origin, { icon: vanIcon }).addTo(map).bindPopup("You");
+    drawRoute(origin);
+  }, () => {
+    map.setView(destination, 14);
+  });
+</script>
+{% endblock %}

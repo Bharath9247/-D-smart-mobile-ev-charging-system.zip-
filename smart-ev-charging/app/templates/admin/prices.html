@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Manage Prices{% endblock %}
+{% block content %}
+<h3 class="mb-4">Manage Charging Prices</h3>
+
+<div class="card p-4">
+  <form method="POST">
+    <table class="table align-middle">
+      <thead><tr><th>Type</th><th>Price / kWh (₹)</th><th>Service Fee (₹)</th></tr></thead>
+      <tbody>
+        {% for p in prices %}
+        <tr>
+          <td>{{ p.charging_type }}</td>
+          <td><input type="number" step="0.5" name="rate_{{ p.id }}" value="{{ p.price_per_kwh }}" class="form-control"></td>
+          <td><input type="number" step="1" name="fee_{{ p.id }}" value="{{ p.service_fee }}" class="form-control"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button class="btn btn-success" type="submit">Save Prices</button>
+  </form>
+</div>
+{% endblock %}

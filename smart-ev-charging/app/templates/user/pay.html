@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Pay{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card p-4">
+      <h4 class="mb-3"><i class="bi bi-credit-card-fill text-success"></i> Payment</h4>
+      <p>Request #{{ req.id }} — {{ req.charging_type }}</p>
+      <h2 class="mb-4">₹{{ req.amount }}</h2>
+
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Card Number</label>
+          <input type="text" class="form-control" placeholder="4242 4242 4242 4242" required>
+        </div>
+        <div class="row">
+          <div class="col-6 mb-3">
+            <label class="form-label">Expiry</label>
+            <input type="text" class="form-control" placeholder="MM/YY" required>
+          </div>
+          <div class="col-6 mb-3">
+            <label class="form-label">CVV</label>
+            <input type="text" class="form-control" placeholder="123" required>
+          </div>
+        </div>
+        <button class="btn btn-success w-100" type="submit">Pay ₹{{ req.amount }}</button>
+      </form>
+      <p class="text-muted small mt-3 mb-0">
+        Simulated checkout — wire this form to Stripe Elements / Razorpay Checkout using
+        the public key in config to process real payments.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

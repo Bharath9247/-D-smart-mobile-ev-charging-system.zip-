@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard{% endblock %}
+{% block content %}
+<h3 class="mb-4">Welcome, {{ current_user.name }} <i class="bi bi-ev-station-fill"></i></h3>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <i class="bi bi-plus-circle fs-1 text-success"></i>
+      <h5 class="mt-2">Request Mobile Charging</h5>
+      <a href="{{ url_for('user.request_charging') }}" class="btn btn-success mt-2">New Request</a>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <i class="bi bi-clock-history fs-1 text-primary"></i>
+      <h5 class="mt-2">Booking History</h5>
+      <a href="{{ url_for('user.history') }}" class="btn btn-outline-primary mt-2">View History</a>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <i class="bi bi-bell fs-1 text-warning"></i>
+      <h5 class="mt-2">Notifications
+        {% if unread_count %}<span class="badge bg-danger">{{ unread_count }}</span>{% endif %}
+      </h5>
+      <a href="{{ url_for('user.notifications') }}" class="btn btn-outline-warning mt-2">View All</a>
+    </div>
+  </div>
+</div>
+
+{% if active %}
+<div class="card p-4">
+  <h5>Active Request <span class="badge bg-info badge-status">{{ active.status }}</span></h5>
+  <p class="mb-1">Charging type: <strong>{{ active.charging_type }}</strong></p>
+  <p class="mb-1">Requested: {{ active.requested_at.strftime('%d %b %Y, %H:%M') }}</p>
+  <p class="mb-3">Estimated amount: ₹{{ active.amount }}</p>
+  <a href="{{ url_for('user.track', request_id=active.id) }}" class="btn btn-success">Track Live</a>
+</div>
+{% else %}
+<div class="alert alert-light border">You have no active charging request right now.</div>
+{% endif %}
+{% endblock %}

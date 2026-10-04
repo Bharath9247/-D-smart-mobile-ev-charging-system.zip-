@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Track Charging{% endblock %}
+{% block content %}
+<h3 class="mb-3"><i class="bi bi-truck"></i> Tracking Request #{{ req.id }}</h3>
+
+<div class="row">
+  <div class="col-md-7">
+    <div id="map"></div>
+  </div>
+  <div class="col-md-5">
+    <div class="card p-4">
+      <p>Status: <span id="statusBadge" class="badge bg-info badge-status">{{ req.status }}</span></p>
+      <p>Charging type: <strong>{{ req.charging_type }}</strong></p>
+      <p>Amount: ₹{{ req.amount }}</p>
+      <p id="etaLine">{% if eta %}ETA: <strong>{{ eta }} min</strong>{% else %}Waiting for van assignment...{% endif %}</p>
+
+      {% if req.status == 'completed' %}
+        <a href="{{ url_for('user.pay', request_id=req.id) }}" class="btn btn-success">Pay Now</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Demo map (OpenStreetMap via Leaflet). Route line is fetched from the free
+  // OSRM public demo routing server — no API key required for either.
+  const userLoc = [{{ req.lat }}, {{ req.lng }}];
+  const map = L.map("map").setView(userLoc, 14);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    maxZoom: 19,
+  }).addTo(map);
+
+  const userIcon = L.divIcon({
+    className: "", html: '<div style="background:#1d5fad;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">You</div>',
+    iconSize: [28, 28], iconAnchor: [14, 14],
+  });
+  const vanIcon = L.divIcon({
+    className: "", html: '<div style="background:#2e9e4b;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">🚐</div>',
+    iconSize: [28, 28], iconAnchor: [14, 14],
+  });
+
+  L.marker(userLoc, { icon: userIcon }).addTo(map).bindPopup("You");
+
+  let vanMarker = null;
+  let routeLine = null;
+  let lastVanPos = null;
+
+  function samePos(a, b) {
+    return a && b && a[0] === b[0] && a[1] === b[1];
+  }
+
+  async function drawRoute(vanPos) {
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${vanPos[1]},${vanPos[0]};${userLoc[1]},${userLoc[0]}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.routes && data.routes[0]) {
+        const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        if (routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(coords, { color: "#1d5fad", weight: 4, opacity: 0.8 }).addTo(map);
+      }
+    } catch (e) {
+      // Routing server unreachable — markers alone still show live position.
+      if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+    }
+  }
+
+  async function refresh() {
+    const res = await fetch("{{ url_for('user.api_track', request_id=req.id) }}");
+    const data = await res.json();
+    document.getElementById("statusBadge").innerText = data.status;
+
+    if (data.van_lat && data.van_lng) {
+      const pos = [data.van_lat, data.van_lng];
+      if (!vanMarker) {
+        vanMarker = L.marker(pos, { icon: vanIcon }).addTo(map).bindPopup("Charging Van");
+        map.fitBounds([userLoc, pos], { padding: [40, 40] });
+      } else {
+        vanMarker.setLatLng(pos);
+      }
+
+      if (!samePos(pos, lastVanPos)) {
+        drawRoute(pos);
+        lastVanPos = pos;
+      }
+
+      if (data.eta_minutes !== null) {
+        document.getElementById("etaLine").innerText = `ETA: ${data.eta_minutes} min`;
+      }
+    } else {
+      document.getElementById("etaLine").innerText = "Waiting for van assignment...";
+    }
+  }
+
+  refresh();
+  setInterval(refresh, {{ poll_ms }});
+</script>
+{% endblock %}

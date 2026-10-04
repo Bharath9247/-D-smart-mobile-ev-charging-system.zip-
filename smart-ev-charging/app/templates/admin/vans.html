@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Manage Vans{% endblock %}
+{% block content %}
+<h3 class="mb-4">Manage Charging Vans</h3>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card p-4">
+      <h6>Add New Van</h6>
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Van Number</label>
+          <input type="text" name="van_number" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Assign Driver</label>
+          <select name="driver_id" class="form-select">
+            <option value="">-- Unassigned --</option>
+            {% for d in drivers %}
+              <option value="{{ d.id }}">{{ d.name }} ({{ d.email }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Battery Capacity (kWh)</label>
+          <input type="number" name="battery_capacity_kwh" class="form-control" value="50">
+        </div>
+        <button class="btn btn-success w-100" type="submit">Add Van</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card p-3">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Van #</th><th>Driver</th><th>Status</th><th>Capacity</th><th>Last Updated</th></tr></thead>
+        <tbody>
+          {% for v in vans %}
+          <tr>
+            <td>{{ v.van_number }}</td>
+            <td>{{ v.driver.name if v.driver else 'Unassigned' }}</td>
+            <td><span class="badge bg-{{ 'success' if v.status=='available' else ('warning text-dark' if v.status=='busy' else 'secondary') }} badge-status">{{ v.status }}</span></td>
+            <td>{{ v.battery_capacity_kwh }} kWh</td>
+            <td>{{ v.last_updated.strftime('%d %b %H:%M') }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-4">No vans added yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
