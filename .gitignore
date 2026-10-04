@@ -1,0 +1,4 @@
+__pycache__/
+*.py[cod]
+.env
+smart-ev-charging/instance/*.db
